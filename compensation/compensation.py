@@ -117,8 +117,8 @@ class Compensation :
 		self.h.newpin("z-pos", hal.HAL_FLOAT, hal.HAL_IN)
 		self.h.newpin("fade-height", hal.HAL_FLOAT, hal.HAL_IN)
 		self.h.newpin("resolution", hal.HAL_FLOAT, hal.HAL_IN)
-		self.h.newpin("eoffset", hal.HAL_FLOAT, hal.HAL_IN
-		self.h.newpin("eoffset-limited", hal.HAL_BIT, hal.HAL_IN)	      
+		self.h.newpin("eoffset", hal.HAL_FLOAT, hal.HAL_IN)
+		self.h.newpin("eoffset-limited", hal.HAL_BIT, hal.HAL_IN)
 		self.h.ready()
 		
 		s = linuxcnc.stat()
