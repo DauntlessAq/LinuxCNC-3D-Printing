@@ -26,6 +26,8 @@ from enum import Enum, unique
 
 import linuxcnc
 
+from qtpyvcp.utilities.settings import getSetting, setSetting
+
 @unique
 class States(Enum):
     START = 1
@@ -44,15 +46,11 @@ class Compensation :
 			sys.exit()
 
 		self.filename = sys.argv[1]
-		self.method = sys.argv[2]
-		
-		# default to cubic if not specified
-		if self.method == "" : self.method = "cubic"
-
 
 	def loadMap(self) :
+
 		# data coordinates and values
-		self.data = np.loadtxt(self.filename, dtype=float, delimiter=" ", usecols=(0, 1, 2))
+		self.data = np.loadtxt(self.filename, dtype=float, delimiter=" ", usecols=(0, 1, 2), skiprows=1)
 		self.x_data = np.around(self.data[:,0],1)
 		self.y_data = np.around(self.data[:,1],1)
 		self.z_data = self.data[:,2]
@@ -117,8 +115,9 @@ class Compensation :
 		self.h.newpin("z-pos", hal.HAL_FLOAT, hal.HAL_IN)
 		self.h.newpin("fade-height", hal.HAL_FLOAT, hal.HAL_IN)
 		self.h.newpin("resolution", hal.HAL_FLOAT, hal.HAL_IN)
-		self.h.newpin("eoffset", hal.HAL_FLOAT, hal.HAL_IN
-		self.h.newpin("eoffset-limited", hal.HAL_BIT, hal.HAL_IN)	      
+		self.h.newpin("eoffset", hal.HAL_FLOAT, hal.HAL_IN)
+		self.h.newpin("eoffset-limited", hal.HAL_BIT, hal.HAL_IN)
+		self.h.newpin("interp-method", hal.HAL_S32, hal.HAL_IN)
 		self.h.ready()
 		
 		s = linuxcnc.stat()
@@ -163,15 +162,25 @@ class Compensation :
 					if currentState != prevState :
 						print("\nCompensation entering LOADMAP state")
 						prevState = currentState
-			
+						
 					mapTime = os.path.getmtime(self.filename)
-
+					match self.h['interp-method']:
+						case 0:
+							self.method = "cubic"
+						case 1:
+							self.method = "linear"
+						case 2:
+							self.method = "nearest"
+						case _:
+							self.method = "cubic"
+							
 					#if mapTime != prevMapTime:
-					if (mapTime != prevMapTime) or (self.h['resolution'] != PrevResolution):
+					if (mapTime != prevMapTime) or (self.h['resolution'] != PrevResolution) or (self.method != PrevMethod):
 						self.loadMap()
-						print("	Compensation map loaded")
+						print(f"Compensation map re-loaded with interpolation method: {self.method}")
 						prevMapTime = mapTime
 						PrevResolution = self.h['resolution']
+						PrevMethod = self.method
 
 
 					# transition to RUNNING state
@@ -234,7 +243,7 @@ class Compensation :
 					currentState = States.IDLE
 
 		except KeyboardInterrupt:
-	  	  raise SystemExit
+			raise SystemExit
 
 comp = Compensation()
 comp.run()
